@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Cartera Digital · Paga servicios con Crypto o PayPal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f0f4fe 0%, #e9eefa 100%);
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb4d);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            display: inline-block;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            color: #2c3e66;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+
+        /* saldos */
+        .balances {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+        .balance-card {
+            background: white;
+            border-radius: 2rem;
+            padding: 1rem 1.8rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            flex: 1;
+            min-width: 180px;
+            transition: transform 0.2s;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        .balance-card:hover { transform: translateY(-3px); }
+        .balance-card i { font-size: 2rem; margin-right: 0.5rem; vertical-align: middle; }
+        .balance-card .title { font-weight: 600; color: #2c3e50; font-size: 0.9rem; }
+        .balance-card .amount { font-size: 1.7rem; font-weight: 800; margin-top: 0.3rem; color: #0f2b3d; }
+        .balance-card .usd-equivalent { font-size: 0.75rem; color: #5b7a9a; margin-top: 0.2rem; }
+        .paypal { border-left: 6px solid #0070ba; }
+        .bitcoin { border-left: 6px solid #f7931a; }
+        .ethereum { border-left: 6px solid #627eea; }
+
+        /* grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.8rem;
+        }
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; }
+            body { padding: 1.2rem; }
+        }
+
+        .card {
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(2px);
+            border-radius: 1.8rem;
+            padding: 1.5rem;
+            box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.7);
+        }
+        .card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            border-left: 5px solid #3b82f6;
+            padding-left: 0.8rem;
+            color: #1e293b;
+        }
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.4rem;
+            color: #334155;
+        }
+        select, input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border-radius: 1.2rem;
+            border: 1.5px solid #e2e8f0;
+            background: white;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+        .cost-badge {
+            background: #eef2ff;
+            padding: 0.6rem 1rem;
+            border-radius: 1rem;
+            display: inline-block;
+            font-weight: 700;
+            color: #1e40af;
+            margin: 0.5rem 0;
+        }
+        .btn-pay {
+            background: linear-gradient(95deg, #0f2b3d, #1e4a6e);
+            border: none;
+            width: 100%;
+            padding: 0.9rem;
+            border-radius: 2rem;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 0.5rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .btn-pay:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-pay:hover:not(:disabled) {
+            background: linear-gradient(95deg, #1e3a4a, #2c5a7a);
+            transform: scale(0.98);
+        }
+        .method-fields {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 1.2rem;
+            margin-top: 0.5rem;
+        }
+        .history-list, .pending-list {
+            max-height: 340px;
+            overflow-y: auto;
+        }
+        .history-item, .pending-item {
+            background: #f9f9ff;
+            border-radius: 1.2rem;
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.7rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            border-left: 4px solid #3b82f6;
+        }
+        .status-paid { background: #dcfce7; color: #15803d; }
+        .status-pending { background: #ffe4e2; color: #b91c1c; }
+        .service-name { font-weight: 700; }
+        .btn-pay-quick {
+            background: #3b82f6;
+            border: none;
+            color: white;
+            padding: 0.3rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.7rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .toast-msg {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #1f2937;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 2rem;
+            z-index: 1000;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: fadeInUp 0.3s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .crypto-detail {
+            font-size: 0.7rem;
+            color: #4b5563;
+            margin-top: 0.2rem;
+        }
+        .empty-msg {
+            color: #6c757d;
+            text-align: center;
+            padding: 1.5rem;
+            font-style: italic;
+        }
+        footer {
+            text-align: center;
+            margin-top: 2.5rem;
+            font-size: 0.8rem;
+            color: #5b6e8c;
+        }
+
+        /* MODAL DE VALIDACIÓN */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0.2s, opacity 0.2s;
+        }
+        .modal-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-card {
+            background: white;
+            border-radius: 2rem;
+            padding: 2rem 2.5rem;
+            text-align: center;
+            max-width: 320px;
+            width: 80%;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.3);
+        }
+        .modal-card i {
+            font-size: 3rem;
+            color: #3b82f6;
+            margin-bottom: 1rem;
+        }
+        .modal-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .modal-card p {
+            color: #4b5563;
+            margin: 0.5rem 0;
+        }
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #e2e8f0;
+            border-top: 5px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 1rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .timer-text {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="header">
+        <h1><i class="fas fa-wallet"></i>  Cartera Digital · Crypto & PayPal</h1>
+        <p>Paga tus servicios · Simulación con validación de 8 segundos</p>
+    </div>
+
+    <div class="balances" id="balancesContainer"></div>
+
+    <div class="main-grid">
+        <div class="card">
+            <h2><i class="fas fa-credit-card"></i> Pagar servicio</h2>
+            <div class="form-group">
+                <label><i class="fas fa-tv"></i> Servicio a pagar</label>
+                <select id="serviceSelect"></select>
+                <div class="cost-badge" id="serviceCostDisplay">💰 Costo: $0.00 USD</div>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-money-bill-wave"></i> Método de pago</label>
+                <select id="paymentMethodSelect">
+                    <option value="paypal">PayPal (USD)</option>
+                    <option value="bitcoin">Bitcoin (BTC)</option>
+                    <option value="ethereum">Ethereum (ETH)</option>
+                </select>
+            </div>
+
+            <div id="dynamicFields" class="method-fields"></div>
+
+            <button id="payBtn" class="btn-pay"><i class="fas fa-lock"></i> Validar y Pagar</button>
+        </div>
+
+        <div>
+            <div class="card" style="margin-bottom: 1.8rem;">
+                <h2><i class="fas fa-clock"></i> Pagos realizados</h2>
+                <div id="historyList" class="history-list">
+                    <div class="empty-msg">No hay pagos registrados aún</div>
+                </div>
+            </div>
+            <div class="card">
+                <h2><i class="fas fa-calendar-times"></i> Servicios pendientes (último mes)</h2>
+                <div id="pendingList" class="pending-list">
+                    <div class="empty-msg">Cargando...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <i class="fas fa-shield-alt"></i> Simulación · Al pagar se validará saldo tras 8 segundos de espera.
+    </footer>
+</div>
+
+<!-- Modal de validación -->
+<div id="validationModal" class="modal-overlay">
+    <div class="modal-card">
+        <i class="fas fa-hourglass-half"></i>
+        <h3>Validando transacción</h3>
+        <p>Verificando saldo y procesando...</p>
+        <div class="spinner"></div>
+        <p class="timer-text" id="modalTimer">8 segundos</p>
+    </div>
+</div>
+
+<script>
+    // ---------- CONFIGURACIÓN ----------
+    const SERVICES = [
+        { id: 1, name: "Netflix", price: 12.99 },
+        { id: 2, name: "Spotify", price: 9.99 },
+        { id: 3, name: "Amazon Prime", price: 14.99 },
+        { id: 4, name: "Disney+", price: 10.99 },
+        { id: 5, name: "HBO Max", price: 11.99 }
+    ];
+
+    const BTC_USD_RATE = 32000;
+    const ETH_USD_RATE = 2100;
+
+    const DEFAULT_BALANCES = {
+        paypal: 350.00,
+        bitcoin: 0.25,
+        ethereum: 5.0
+    };
+
+    const STORAGE_KEY = "cryptoWalletApp";
+
+    let appData = {
+        balances: { ...DEFAULT_BALANCES },
+        payments: []
+    };
+
+    // Helper storage
+    function persistData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            balances: appData.balances,
+            payments: appData.payments
+        }));
+    }
+
+    function loadInitialData() {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                appData.balances = parsed.balances || DEFAULT_BALANCES;
+                appData.payments = parsed.payments || [];
+                if (appData.payments.length === 0) addDemoPayments();
+            } catch(e) { addDemoPayments(); }
+        } else {
+            addDemoPayments();
+        }
+        if (!appData.balances.paypal) appData.balances.paypal = DEFAULT_BALANCES.paypal;
+        if (!appData.balances.bitcoin) appData.balances.bitcoin = DEFAULT_BALANCES.bitcoin;
+        if (!appData.balances.ethereum) appData.balances.ethereum = DEFAULT_BALANCES.ethereum;
+        persistData();
+    }
+
+    function addDemoPayments() {
+        const today = new Date();
+        const tenDaysAgo = new Date(today);
+        tenDaysAgo.setDate(today.getDate() - 10);
+        const fortyDaysAgo = new Date(today);
+        fortyDaysAgo.setDate(today.getDate() - 40);
+        
+        appData.payments.push({
+            id: Date.now() + 1,
+            serviceId: 1,
+            serviceName: "Netflix",
+            amountUSD: 12.99,
+            method: "paypal",
+            cryptoAmount: null,
+            dateISO: tenDaysAgo.toISOString(),
+            status: "completed"
+        });
+        appData.payments.push({
+            id: Date.now() + 2,
+            serviceId: 2,
+            serviceName: "Spotify",
+            amountUSD: 9.99,
+            method: "bitcoin",
+            cryptoAmount: 0.000312,
+            dateISO: fortyDaysAgo.toISOString(),
+            status: "completed"
+        });
+        appData.payments.push({
+            id: Date.now() + 3,
+            serviceId: 3,
+            serviceName: "Amazon Prime",
+            amountUSD: 14.99,
+            method: "ethereum",
+            cryptoAmount: 0.00714,
+            dateISO: fortyDaysAgo.toISOString(),
+            status: "completed"
+        });
+        persistData();
+    }
+
+    function formatDate(dateISO) {
+        const d = new Date(dateISO);
+        return d.toLocaleDateString('es-ES', { year:'numeric', month:'short', day:'numeric' });
+    }
+
+    function getLastPaymentByService(serviceId) {
+        const filtered = appData.payments.filter(p => p.serviceId === serviceId);
+        if(filtered.length === 0) return null;
+        return filtered.reduce((latest, curr) => new Date(curr.dateISO) > new Date(latest.dateISO) ? curr : latest);
+    }
+
+    function isServicePaidRecently(serviceId) {
+        const last = getLastPaymentByService(serviceId);
+        if(!last) return false;
+        const lastDate = new Date(last.dateISO);
+        const now = new Date();
+        const diffDays = (now - lastDate) / (1000 * 60 * 60 * 24);
+        return diffDays <= 30;
+    }
+
+    // Renderizados
+    function renderAll() {
+        renderBalances();
+        renderServiceSelector();
+        renderHistory();
+        renderPendingServices();
+        updateDynamicFields();
+    }
+
+    function renderBalances() {
+        const container = document.getElementById('balancesContainer');
+        const b = appData.balances;
+        const btcUsdValue = (b.bitcoin * BTC_USD_RATE).toFixed(2);
+        const ethUsdValue = (b.ethereum * ETH_USD_RATE).toFixed(2);
+        container.innerHTML = `
+            <div class="balance-card paypal"><i class="fab fa-paypal" style="color:#0070ba;"></i> <span class="title">PayPal USD</span><div class="amount">$${b.paypal.toFixed(2)} USD</div><div class="usd-equivalent">Saldo disponible</div></div>
+            <div class="balance-card bitcoin"><i class="fab fa-bitcoin" style="color:#f7931a;"></i> <span class="title">Bitcoin</span><div class="amount">₿ ${b.bitcoin.toFixed(6)} BTC</div><div class="usd-equivalent">≈ $${btcUsdValue} USD</div></div>
+            <div class="balance-card ethereum"><i class="fab fa-ethereum" style="color:#627eea;"></i> <span class="title">Ethereum</span><div class="amount">Ξ ${b.ethereum.toFixed(5)} ETH</div><div class="usd-equivalent">≈ $${ethUsdValue} USD</div></div>
+        `;
+    }
+
+    function renderServiceSelector() {
+        const select = document.getElementById('serviceSelect');
+        const current = select.value ? parseInt(select.value) : SERVICES[0].id;
+        select.innerHTML = SERVICES.map(s => `<option value="${s.id}">${s.name} - $${s.price} USD/mes</option>`).join('');
+        if(SERVICES.some(s => s.id === current)) select.value = current;
+        else select.value = SERVICES[0].id;
+        updateCostDisplay();
+    }
+
+    function updateCostDisplay() {
+        const select = document.getElementById('serviceSelect');
+        const service = SERVICES.find(s => s.id === parseInt(select.value));
+        const costSpan = document.getElementById('serviceCostDisplay');
+        if(service) costSpan.innerHTML = `💰 Monto a pagar: $${service.price.toFixed(2)} USD`;
+    }
+
+    function updateDynamicFields() {
+        const method = document.getElementById('paymentMethodSelect').value;
+        const container = document.getElementById('dynamicFields');
+        if(method === 'paypal') {
+            container.innerHTML = `<label><i class="fab fa-paypal"></i> Correo electrónico PayPal</label><input type="email" id="paypalEmail" placeholder="usuario@ejemplo.com" required><div class="crypto-detail">Se descontará de tu saldo PayPal.</div>`;
+        } else if(method === 'bitcoin') {
+            container.innerHTML = `<label><i class="fab fa-bitcoin"></i> Dirección de billetera Bitcoin</label><input type="text" id="cryptoAddress" placeholder="bc1... o 1A1zP1..." required><div class="crypto-detail">Tasa: 1 BTC = $${BTC_USD_RATE} USD.</div>`;
+        } else {
+            container.innerHTML = `<label><i class="fab fa-ethereum"></i> Dirección Ethereum (0x...)</label><input type="text" id="cryptoAddress" placeholder="0x..." required><div class="crypto-detail">Tasa: 1 ETH = $${ETH_USD_RATE} USD.</div>`;
+        }
+    }
+
+    function renderHistory() {
+        const container = document.getElementById('historyList');
+        if(!appData.payments.length) { container.innerHTML = '<div class="empty-msg">📭 No hay pagos registrados aún</div>'; return; }
+        const sorted = [...appData.payments].sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
+        container.innerHTML = sorted.map(p => {
+            let methodIcon = p.method === 'paypal' ? '<i class="fab fa-paypal"></i>' : (p.method === 'bitcoin' ? '<i class="fab fa-bitcoin"></i>' : '<i class="fab fa-ethereum"></i>');
+            let extraInfo = p.cryptoAmount ? ` (${p.cryptoAmount.toFixed(p.method==='bitcoin'?6:5)} ${p.method==='bitcoin'?'BTC':'ETH'})` : '';
+            return `<div class="history-item"><div><div class="service-name">${p.serviceName}</div><div style="font-size:0.7rem;">${formatDate(p.dateISO)}</div></div><div style="text-align:right"><div><strong>$${p.amountUSD.toFixed(2)} USD</strong> ${methodIcon}</div><div class="crypto-detail">${p.method.toUpperCase()}${extraInfo}</div></div></div>`;
+        }).join('');
+    }
+
+    function renderPendingServices() {
+        const container = document.getElementById('pendingList');
+        const pendingHtml = SERVICES.map(service => {
+            const isPaid = isServicePaidRecently(service.id);
+            const lastPay = getLastPaymentByService(service.id);
+            let statusText = isPaid ? "✅ Pagado (vigente)" : "⚠️ Pendiente de pago";
+            let statusClass = isPaid ? "status-paid" : "status-pending";
+            let extraDate = "";
+            if(lastPay && isPaid) {
+                const nextDue = new Date(new Date(lastPay.dateISO));
+                nextDue.setDate(nextDue.getDate() + 30);
+                extraDate = `<div style="font-size:0.7rem;">Vence: ${nextDue.toLocaleDateString()}</div>`;
+            } else if(!isPaid && lastPay) extraDate = `<div style="font-size:0.7rem;">Último pago: ${formatDate(lastPay.dateISO)} (caducado)</div>`;
+            else if(!isPaid && !lastPay) extraDate = `<div style="font-size:0.7rem;">Nunca pagado</div>`;
+            return `<div class="pending-item"><div><div class="service-name">${service.name} · $${service.price}/mes</div>${extraDate}</div><div style="display:flex; flex-direction:column; align-items:flex-end;"><span class="status ${statusClass}">${statusText}</span><button class="btn-pay-quick" data-service-id="${service.id}" style="margin-top:6px;">Pagar ahora</button></div></div>`;
+        }).join('');
+        container.innerHTML = pendingHtml;
+        document.querySelectorAll('.btn-pay-quick').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const serviceId = parseInt(btn.getAttribute('data-service-id'));
+                document.getElementById('serviceSelect').value = serviceId;
+                updateCostDisplay();
+                document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+                showToast(`🔍 Servicio "${SERVICES.find(s=>s.id===serviceId).name}" seleccionado`, "info");
+            });
+        });
+    }
+
+    function showToast(message, type = "success") {
+        const existing = document.querySelector('.toast-msg');
+        if(existing) existing.remove();
+        const toast = document.createElement('div');
+        toast.className = 'toast-msg';
+        toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i> ${message}`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3500);
+    }
+
+    // ----------------- PAGO REAL (con verificaciones y mutación) -----------------
+    function commitPayment() {
+        const serviceId = parseInt(document.getElementById('serviceSelect').value);
+        const service = SERVICES.find(s => s.id === serviceId);
+        if(!service) { showToast("Servicio inválido", "error"); return false; }
+        const amountUSD = service.price;
+        const method = document.getElementById('paymentMethodSelect').value;
+
+        // Validar campos específicos otra vez (por si acaso)
+        if(method === 'paypal') {
+            const email = document.getElementById('paypalEmail');
+            if(!email || !email.value.trim() || !email.value.includes('@')) {
+                showToast("⚠️ Correo PayPal inválido", "error");
+                return false;
+            }
+        } else {
+            const addr = document.getElementById('cryptoAddress');
+            if(!addr || !addr.value.trim() || addr.value.trim().length < 5) {
+                showToast("⚠️ Dirección wallet inválida", "error");
+                return false;
+            }
+        }
+
+        let newBalances = { ...appData.balances };
+        let cryptoAmountNeeded = null;
+
+        if(method === 'paypal') {
+            if(newBalances.paypal >= amountUSD) newBalances.paypal -= amountUSD;
+            else { showToast(`❌ Saldo PayPal insuficiente. Disponible: $${newBalances.paypal.toFixed(2)}`, "error"); return false; }
+        } else if(method === 'bitcoin') {
+            const btcNeeded = amountUSD / BTC_USD_RATE;
+            if(newBalances.bitcoin >= btcNeeded) {
+                newBalances.bitcoin -= btcNeeded;
+                cryptoAmountNeeded = btcNeeded;
+            } else { showToast(`❌ Saldo BTC insuficiente. Disponible: ${newBalances.bitcoin.toFixed(6)} BTC`, "error"); return false; }
+        } else if(method === 'ethereum') {
+            const ethNeeded = amountUSD / ETH_USD_RATE;
+            if(newBalances.ethereum >= ethNeeded) {
+                newBalances.ethereum -= ethNeeded;
+                cryptoAmountNeeded = ethNeeded;
+            } else { showToast(`❌ Saldo ETH insuficiente. Disponible: ${newBalances.ethereum.toFixed(5)} ETH`, "error"); return false; }
+        }
+
+        // Registrar pago
+        const newPayment = {
+            id: Date.now(),
+            serviceId: service.id,
+            serviceName: service.name,
+            amountUSD: amountUSD,
+            method: method,
+            cryptoAmount: cryptoAmountNeeded,
+            dateISO: new Date().toISOString(),
+            status: "completed"
+        };
+        appData.payments.push(newPayment);
+        appData.balances = newBalances;
+        persistData();
+        renderAll();
+        showToast(`✅ Pago exitoso de $${amountUSD} USD para ${service.name} con ${method.toUpperCase()}`, "success");
+        return true;
+    }
+
+    // Modal y temporizador
+    let waitingTimeout = null;
+    const modal = document.getElementById('validationModal');
+    const payBtn = document.getElementById('payBtn');
+
+    function closeModal() {
+        modal.classList.remove('active');
+        if(waitingTimeout) {
+            clearTimeout(waitingTimeout);
+            waitingTimeout = null;
+        }
+        payBtn.disabled = false;
+    }
+
+    function startValidationWithDelay() {
+        // Validación previa de campos (rápida)
+        const method = document.getElementById('paymentMethodSelect').value;
+        if(method === 'paypal') {
+            const email = document.getElementById('paypalEmail');
+            if(!email || !email.value.trim() || !email.value.includes('@')) {
+                showToast("⚠️ Introduce un email PayPal válido antes de pagar", "error");
+                return;
+            }
+        } else {
+            const addr = document.getElementById('cryptoAddress');
+            if(!addr || !addr.value.trim() || addr.value.trim().length < 5) {
+                showToast("⚠️ Introduce una dirección de wallet válida", "error");
+                return;
+            }
+        }
+        const serviceSelect = document.getElementById('serviceSelect');
+        if(!serviceSelect.value) { showToast("Selecciona un servicio", "error"); return; }
+
+        // Mostrar modal con contador
+        modal.classList.add('active');
+        payBtn.disabled = true;
+        let secondsLeft = 8;
+        const timerSpan = document.getElementById('modalTimer');
+        timerSpan.innerText = `${secondsLeft} segundos`;
+
+        const interval = setInterval(() => {
+            secondsLeft--;
+            if(secondsLeft >= 0) {
+                timerSpan.innerText = `${secondsLeft} segundos`;
+            }
+            if(secondsLeft < 0) {
+                clearInterval(interval);
+            }
+        }, 1000);
+
+        waitingTimeout = setTimeout(() => {
+            clearInterval(interval);
+            closeModal();
+            // Ahora ejecutar el pago real
+            commitPayment();
+        }, 8000);
+    }
+
+    // Eventos
+    function bindEvents() {
+        document.getElementById('paymentMethodSelect').addEventListener('change', () => updateDynamicFields());
+        document.getElementById('serviceSelect').addEventListener('change', () => updateCostDisplay());
+        payBtn.addEventListener('click', startValidationWithDelay);
+        // Evitar múltiples modales
+    }
+
+    function init() {
+        loadInitialData();
+        bindEvents();
+        renderAll();
+        window.addEventListener('storage', (e) => {
+            if(e.key === STORAGE_KEY) {
+                const newData = JSON.parse(e.newValue);
+                if(newData) {
+                    appData.balances = newData.balances;
+                    appData.payments = newData.payments;
+                    renderAll();
+                }
+            }
+        });
+    }
+    init();
+</script>
+</body>
+</html>
